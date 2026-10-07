@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Farland Tales - 远乡物语</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+  background: #2c2416;
+  overflow: hidden;
+  height: 100vh;
+  user-select: none;
+}
+
+#game-container {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+}
+
+#main-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+#top-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: linear-gradient(180deg, #3d3221, #2c2416);
+  border-bottom: 2px solid #5a4a32;
+  z-index: 10;
+  flex-shrink: 0;
+  min-height: 56px;
+}
+
+.top-panel {
+  background: #4a3a28;
+  border: 1px solid #6b5638;
+  border-radius: 8px;
+  padding: 6px 12px;
+  color: #e8dcc8;
+  font-size: 13px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.stamina-bar {
+  background: #3a2a18;
+  border-radius: 4px;
+  height: 14px;
+  width: 100px;
+  overflow: hidden;
+}
+.stamina-fill {
+  background: linear-gradient(90deg, #f4a742, #e8762e);
+  height: 100%;
+  transition: width 0.3s;
+}
+
+.tool-btn {
+  width: 40px; height: 40px;
+  border-radius: 8px;
+  border: 2px solid #6b5638;
+  background: #4a3a28;
+  cursor: pointer;
+  font-size: 20px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+  color: #c4b89a;
+  position: relative;
+}
+.tool-btn:hover { background: #5a4a38; border-color: #8b7356; }
+.tool-btn.active {
+  background: #6b8a3a;
+  border-color: #8aaa4a;
+  box-shadow: 0 0 10px rgba(107,138,58,0.5);
+}
+
+.tool-btn .badge {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  background: #2c1a00;
+  color: #f4c060;
+  font-size: 10px;
+  font-weight: bold;
+  padding: 0 3px;
+  border-radius: 4px;
+  border: 1px solid #6b5638;
+  line-height: 14px;
+}
+
+#held-item-btn {
+  width: 44px; height: 44px;
+  font-size: 24px;
+  border-style: dashed;
+}
+#held-item-btn.has-item {
+  border-style: solid;
+  border-color: #f4a040;
+  background: #5a3e18;
+}
+
+#next-day-btn {
+  background: linear-gradient(135deg, #e8a840, #d4882a);
+  border: 2px solid #f4c060;
+  color: #2c1a00;
+  font-weight: bold;
+  font-size: 14px;
+  padding: 8px 20px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+#next-day-btn:hover {
+  background: linear-gradient(135deg, #f4c060, #e8a840);
+  box-shadow: 0 0 16px rgba(244,192,96,0.6);
+}
+
+#canvas-wrapper {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: #1a1410;
+  position: relative;
+}
+#canvas-wrapper::-webkit-scrollbar { width: 10px; }
+#canvas-wrapper::-webkit-scrollbar-track { background: #1a1410; }
+#canvas-wrapper::-webkit-scrollbar-thumb { background: #4a3a28; border-radius: 5px; }
+
+canvas {
+  display: block;
+  margin: 0 auto;
+  image-rendering: pixelated;
+}
+
+#right-sidebar {
+  width: 220px;
+  background: linear-gradient(180deg, #3d3221, #2c2416);
+  border-left: 2px solid #5a4a32;
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+  gap: 6px;
+  flex-shrink: 0;
+  overflow-y: auto;
+}
+
+.sidebar-btn {
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  border: 2px solid #5a4a32;
+  background: #3d2e1c;
+  color: #e8dcc8;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sidebar-btn:hover { background: #4d3e2c; border-color: #8b7356; }
+.sidebar-btn .icon { font-size: 20px; }
+
+.modal-overlay {
+  position: fixed; top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.6);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 100;
+}
+.modal-overlay.hidden { display: none; }
+
+.modal {
+  background: #3d3221;
+  border: 2px solid #6b5638;
+  border-radius: 12px;
+  max-width: 500px;
+  width: 90%;
+  max-height: 80vh;
+  color: #e8dcc8;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.modal-header {
+  padding: 16px 20px 8px;
+  border-bottom: 1px solid #5a4a32;
+  flex-shrink: 0;
+}
+.modal-header h2 {
+  margin-bottom: 4px;
+  text-align: center;
+  color: #f4c060;
+}
+.modal-body {
+  padding: 12px 20px 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+.modal-body::-webkit-scrollbar { width: 0; }
+.modal-body { scrollbar-width: none; }
+.modal .close-btn {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  background: none;
+  border: none;
+  color: #c4b89a;
+  font-size: 22px;
+  cursor: pointer;
+}
+.modal .close-btn:hover { color: #f4c060; }
+
+.shop-item, .inventory-item, .shipping-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid #4a3a28;
+  gap: 8px;
+}
+.shop-item:hover, .inventory-item:hover { background: #4a3a28; }
+
+.btn {
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 1px solid #6b5638;
+  background: #5a4a32;
+  color: #e8dcc8;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: bold;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.btn:hover { background: #6b5a42; }
+.btn.primary { background: #6b8a3a; border-color: #8aaa4a; }
+.btn.primary:hover { background: #7b9a4a; }
+.btn.danger { background: #8a3a3a; border-color: #aa4a4a; }
+.btn.danger:hover { background: #9a4a4a; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.seed-emoji { filter: grayscale(1); }
+
+#held-item-popup {
+  position: fixed;
+  top: 60px;
+  left: 220px;
+  background: #3d3221;
+  border: 2px solid #6b5638;
+  border-radius: 10px;
+  padding: 8px;
+  z-index: 150;
+  display: none;
+  min-width: 180px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+#held-item-popup::-webkit-scrollbar { width: 0; }
+#held-item-popup { scrollbar-width: none; }
+#held-item-popup.show { display: block; }
+#held-item-popup .popup-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #e8dcc8;
+  gap: 8px;
+}
+#held-item-popup .popup-item:hover { background: #4a3a28; }
+#held-item-popup .popup-item.empty {
+  color: #888;
+  cursor: default;
+  text-align: center;
+  justify-content: center;
+}
+
+.tile-tooltip {
+  position: fixed;
+  background: rgba(20,16,10,0.92);
+  color: #e8dcc8;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #6b5638;
+  font-size: 12px;
+  pointer-events: none;
+  z-index: 200;
+  white-space: nowrap;
+}
+.tile-tooltip.hidden { display: none; }
+
+.hidden { display: none !important; }
+
+/* 配方机器槽位 */
+.machine-slot {
+  width: 48px; height: 48px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 6px; font-size: 20px;
+}
+.machine-slot.empty {
+  border: 2px dashed #4a3a28;
+  color: #555; cursor: pointer;
+}
+.machine-slot.empty:hover {
+  border-color: #7a6a4a;
+  background: #3a2e1c;
+}
+.machine-slot.filled {
+  border: 2px solid #6b5638;
+  background: #3a2e1c;
+  cursor: pointer;
+}
+.machine-slot.filled:hover {
+  border-color: #c86040;
+}
+.machine-slot.working {
+  border: 2px solid #6b5638;
+  background: #3a2e1c;
+  position: relative;
+}
+.machine-slot.ready {
+  border: 2px solid #6b8a3a;
+  background: #3a4a28;
+  cursor: pointer;
+}
+.machine-slot.ready:hover {
+  border-color: #8ac84a;
+}
+.slot-badge {
+  position: absolute; bottom: 1px; right: 2px;
+  font-size: 9px; color: #f4c060; font-weight: bold;
+}
+
+.notification {
+  position: fixed;
+  top: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.85);
+  color: #f4c060;
+  padding: 10px 24px;
+  border-radius: 8px;
+  border: 1px solid #6b5638;
+  z-index: 300;
+  font-weight: bold;
+  animation: fadeInOut 2s ease;
+  pointer-events: none;
+}
+@keyframes fadeInOut {
+  0% { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+  15% { opacity: 1; transform: translateX(-50%) translateY(0); }
+  75% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@media (max-width: 800px) {
+  #right-sidebar { width: 160px; }
+  .top-panel { padding: 4px 8px; font-size: 11px; }
+  #held-item-popup { left: 10px; }
+}
+</style>
+</head>
+<body>
+
+<div id="game-container">
+  <div id="main-area">
+    <div id="top-bar">
+      <div class="top-panel" id="stamina-panel">
+        ⚡ <span id="stamina-text">100/100</span>
+        <div class="stamina-bar"><div class="stamina-fill" id="stamina-fill" style="width:100%"></div></div>
+      </div>
+      <button class="tool-btn active" data-tool="hoe" title="锄头 - 开垦土地">🔨</button>
+      <button class="tool-btn" data-tool="watercan" title="水壶 - 浇灌土地">💧</button>
+      <button class="tool-btn" data-tool="sickle" title="镰刀 - 收割作物">🌾</button>
+      <button class="tool-btn" data-tool="pickaxe" title="镐子 - 清除地块">⛏️</button>
+      <button class="tool-btn" id="held-item-btn" title="手持物品 - 点击选择仓库物品">📦</button>
+      <button id="next-day-btn">⏩ 下一天</button>
+      <div class="top-panel" id="gold-panel">
+        💰 <span id="gold-text">500</span>
+      </div>
+      <div class="top-panel" id="calendar-panel">
+        📅 <span id="date-text">春 第1天 第1年</span>
+      </div>
+    </div>
+
+    <div id="held-item-popup"></div>
+
+    <div id="canvas-wrapper">
+      <canvas id="game-canvas"></canvas>
+    </div>
+  </div>
+
+  <div id="right-sidebar">
+    <button class="sidebar-btn" id="btn-fishing"><span class="icon">🎣</span> 钓鱼</button>
+    <button class="sidebar-btn" id="btn-shop"><span class="icon">🛒</span> 商店</button>
+    <button class="sidebar-btn" id="btn-warehouse"><span class="icon">📦</span> 仓库</button>
+    <button class="sidebar-btn" id="btn-shipping"><span class="icon">📤</span> 出货箱</button>
+    <div style="margin-top: auto; display:flex; flex-direction:column; gap:6px;">
+      <button class="sidebar-btn" id="btn-save" style="font-size:12px; padding:8px;">💾 导出存档</button>
+      <button class="sidebar-btn" id="btn-load" style="font-size:12px; padding:8px;">📂 导入存档</button>
+      <button class="sidebar-btn" id="btn-reset" style="font-size:12px; padding:8px; border-color:#aa4a4a; color:#e88080;">🔄 新存档</button>
+      <input type="file" id="load-file-input" accept=".json" style="display:none;">
+    </div>
+  </div>
+</div>
+
+<div id="tooltip" class="tile-tooltip hidden"></div>
+<div id="notification" class="notification" style="display:none;"></div>
+
+<div class="modal-overlay hidden" id="modal-shop">
+  <div class="modal" style="position:relative;">
+    <button class="close-btn" onclick="closeModal('shop')">✕</button>
+    <div class="modal-header">
+      <h2>🛒 商店</h2>
+      <div style="text-align:center; color:#f4c060;">💰 金币: <span id="shop-gold">0</span></div>
+    </div>
+    <div class="modal-body" id="shop-items"></div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-warehouse">
+  <div class="modal" style="position:relative;">
+    <button class="close-btn" onclick="closeModal('warehouse')">✕</button>
+    <div class="modal-header">
+      <h2>📦 仓库 <span style="font-size:13px;color:#c4b89a;">(<span id="wh-used">0</span>/<span id="wh-capacity">30</span>)</span></h2>
+    </div>
+    <div class="modal-body" id="warehouse-items"></div>
+    <div style="padding:8px 16px 12px; text-align:center;">
+      <button class="btn primary" id="btn-move-all" style="width:100%;" onclick="moveAllToShipping()">📤 一键全部出货</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-shipping">
+  <div class="modal" style="position:relative;">
+    <button class="close-btn" onclick="closeModal('shipping')">✕</button>
+    <div class="modal-header">
+      <h2>📤 出货箱</h2>
+      <div style="text-align:center; color:#a0a0a0; font-size:12px;">每天结束时自动出货</div>
+    </div>
+    <div class="modal-body" id="shipping-items"></div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-fishing">
+  <div class="modal" style="position:relative;">
+    <button class="close-btn" onclick="closeModal('fishing')">✕</button>
+    <div class="modal-header"><h2>🎣 钓鱼小游戏</h2></div>
+    <div class="modal-body" style="text-align:center; padding:20px; color:#c4b89a;">
+      <p style="font-size:48px; margin:20px 0;">🚧</p>
+      <p>钓鱼小游戏开发中...</p>
+      <p style="font-size:13px; margin-top:10px;">将在后续版本中开放</p>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-plant">
+  <div class="modal" style="position:relative;">
+    <button class="close-btn" onclick="closeModal('plant')">✕</button>
+    <div class="modal-header"><h2>🌱 选择种子</h2></div>
+    <div class="modal-body" id="plant-seed-list"></div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="modal-machine">
+  <div class="modal" style="position:relative;">
+    <button class="close-btn" onclick="closeMachineUI()">✕</button>
+    <div class="modal-header"><h2 id="machine-title">配方机器</h2></div>
+    <div class="modal-body" id="machine-body"></div>
+  </div>
+</div>
+
+<script src="data/crops.js"></script>
+<script src="data/items.js"></script>
+<script src="data/recipes.js"></script>
+<script src="js/equipment.js"></script>
+<script src="js/machines.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
